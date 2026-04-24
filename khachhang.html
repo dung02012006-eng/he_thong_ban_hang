@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quản lý khách hàng - Phân loại trạng thái</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body { background-color: #f8f9fa; }
+        .table-responsive { max-height: 350px; overflow-y: auto; }
+        .card { border-radius: 8px; border: 1px solid #dee2e6; }
+        .nav-tabs .nav-link { cursor: pointer; font-weight: bold; color: #6c757d; }
+        .nav-tabs .nav-link.active { color: #052048; border-bottom: 3px solid #05224f; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <a href="index.html" class="text-decoration-none text-muted mb-2 d-inline-block">← Trang chủ</a>
+        <h3 class="mb-3 fw-bold">Quản lý khách hàng</h3>
+
+        <div id="alertBox" class="mb-3"></div>
+
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+                <label class="form-label fw-bold">Tìm khách hàng</label>
+                <div class="d-flex gap-2">
+                    <input id="searchInput" class="form-control" placeholder="Nhập Mã KH / Tên / SĐT để lọc..." />
+                    <button id="searchBtn" class="btn btn-primary px-4">Tìm kiếm</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header bg-light p-0">
+                <ul class="nav nav-tabs border-0" id="statusTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" onclick="filterStatus('Đang theo dõi')">Đang theo dõi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" onclick="filterStatus('Ngừng theo dõi')">Khách hàng đã xoá</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã KH</th>
+                            <th>Tên</th>
+                            <th>SĐT</th>
+                            <th>Địa chỉ</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow-sm" id="formInputCard">
+            <div class="card-header fw-semibold bg-light">Thêm mới / Chỉnh sửa khách hàng</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Tên khách hàng *</label>
+                        <input id="nameInput" class="form-control" placeholder="Nhập tên khách hàng" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Số điện thoại *</label>
+                        <input id="phoneInput" class="form-control" placeholder="Nhập số điện thoại" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Địa chỉ</label>
+                        <input id="addressInput" class="form-control" placeholder="Nhập địa chỉ" />
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button id="saveBtn" class="btn btn-primary px-4">Lưu thông tin</button>
+                    <button id="cancelBtn" class="btn btn-outline-secondary d-none">Hủy chỉnh sửa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+         const customers = [
+        { id: "KH001", name: "Nguyễn Văn An", phone: "0901234567", address: "12 Nguyễn Trãi, Q1", status: "Đang theo dõi" },
+        { id: "KH002", name: "Trần Thị Bình", phone: "0912345678", address: "25 Lê Lợi, Q3", status: "Đang theo dõi" },
+        { id: "KH003", name: "Lê Hoàng Cường", phone: "0987654321", address: "144 Xuân Thủy, Cầu Giấy", status: "Đang theo dõi" },
+        { id: "KH004", name: "Phạm Minh Đức", phone: "0934567890", address: "88 Láng Hạ, Đống Đa", status: "Ngừng theo dõi" },
+        { id: "KH005", name: "Vũ Thị Em", phone: "0922334455", address: "202 Trần Hưng Đạo, Q5", status: "Đang theo dõi" },
+        { id: "KH006", name: "Đặng Văn Phương", phone: "0944556677", address: "15 Võ Văn Kiệt, Q.Bình Tân", status: "Đang theo dõi" },
+        { id: "KH007", name: "Hoàng Gia Giàu", phone: "0966778899", address: "55 Nguyễn Huệ, Q1", status: "Đang theo dõi" },
+        { id: "KH008", name: "Ngô Thu Hà", phone: "0977889900", address: "102 Quang Trung, Gò Vấp", status: "Đang theo dõi" },
+        { id: "KH009", name: "Bùi Công Inh", phone: "0911223344", address: "45 Phan Xích Long, PN", status: "Ngừng theo dõi" },
+        { id: "KH010", name: "Lý Kim Khanh", phone: "0955667788", address: "78 CMT8, Q10", status: "Đang theo dõi" },
+        { id: "KH011", name: "Đỗ Minh Long", phone: "0322445566", address: "120 Nguyễn Văn Linh, Q7", status: "Đang theo dõi" },
+        { id: "KH012", name: "Võ Thành Minh", phone: "0333556677", address: "33 Điện Biên Phủ, Q3", status: "Đang theo dõi" },
+        { id: "KH013", name: "Diệp Thanh Nam", phone: "0344667788", address: "90 Pasteur, Q1", status: "Đang theo dõi" },
+        { id: "KH014", name: "Trương Mỹ Ngọc", phone: "0355778899", address: "11 Tô Hiến Thành, Q10", status: "Đang theo dõi" },
+        { id: "KH015", name: "Phan Văn Oanh", phone: "0366889900", address: "67 Hai Bà Trưng, Q3", status: "Ngừng theo dõi" },
+        { id: "KH016", name: "Trịnh Đình Phong", phone: "0377990011", address: "02 Lê Duẩn, Q1", status: "Đang theo dõi" },
+        { id: "KH017", name: "Lương Thu Quỳnh", phone: "0388001122", address: "89 Lý Thường Kiệt, Q11", status: "Đang theo dõi" },
+        { id: "KH018", name: "Hồ Bảo Sơn", phone: "0399112233", address: "214 Hòa Bình, Q.Tân Phú", status: "Đang theo dõi" },
+        { id: "KH019", name: "Tạ Minh Tâm", phone: "0702233445", address: "56 Nguyễn Đình Chiểu, Q3", status: "Đang theo dõi" },
+        { id: "KH020", name: "Cao Uyên Thư", phone: "0763344556", address: "109 Đinh Tiên Hoàng, Q1", status: "Đang theo dõi" },
+        { id: "KH021", name: "Bạch Vĩnh Uy", phone: "0774455667", address: "44 Xô Viết Nghệ Tĩnh, BT", status: "Ngừng theo dõi" },
+        { id: "KH022", name: "Mạc Đăng Vĩnh", phone: "0785566778", address: "302 Cộng Hòa, Q.Tân Bình", status: "Đang theo dõi" },
+        { id: "KH023", name: "Tô Kim Xuân", phone: "0796677889", address: "15 Hùng Vương, Q5", status: "Đang theo dõi" },
+        { id: "KH024", name: "Thân Trọng Yên", phone: "0817788990", address: "88 Trần Não, Q2", status: "Đang theo dõi" },
+        { id: "KH025", name: "Phùng Mỹ Linh", phone: "0828899001", address: "123 Nam Kỳ Khởi Nghĩa, Q3", status: "Đang theo dõi" }
+      ];
+
+
+        let currentFilter = 'Đang theo dõi';
+        let editingId = null;
+
+        function renderTable() {
+            const val = document.getElementById("searchInput").value.toLowerCase();
+            const filtered = customers.filter(c => 
+                c.status === currentFilter && 
+                (c.name.toLowerCase().includes(val) || c.phone.includes(val) || c.id.toLowerCase().includes(val))
+            );
+
+            document.getElementById("customerTableBody").innerHTML = filtered.map(c => `
+                <tr>
+                    <td class="fw-bold text-primary">${c.id}</td>
+                    <td>${c.name}</td>
+                    <td>${c.phone}</td>
+                    <td>${c.address || "-"}</td>
+                    <td>
+                        ${currentFilter === 'Đang theo dõi' 
+                            ? `<button class="btn btn-sm btn-outline-primary" onclick="editCustomer('${c.id}')">Sửa</button>
+                               <button class="btn btn-sm btn-outline-warning" onclick="deactivateCustomer('${c.id}')">Xoá</button>`
+                            : `<button class="btn btn-sm btn-outline-success" onclick="restoreCustomer('${c.id}')">Khôi phục</button>`
+                        }
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        // Chuyển Tab
+        window.filterStatus = function(status) {
+            currentFilter = status;
+            // Đổi giao diện tab
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(l => l.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Nếu ở mục "Đã xoá" thì ẩn Form nhập cho đỡ rối
+            document.getElementById("formInputCard").style.display = (status === 'Ngừng theo dõi') ? 'none' : 'block';
+            
+            renderTable();
+        };
+
+        // Khôi phục khách hàng
+        window.restoreCustomer = function(id) {
+            const c = customers.find(x => x.id === id);
+            c.status = "Đang theo dõi";
+            renderTable();
+            showAlert(`Đã khôi phục khách hàng ${c.name} thành công.`, "success");
+        };
+
+        // Các hàm cũ giữ nguyên nhưng thêm logic showAlert
+        window.deactivateCustomer = function(id) {
+            const c = customers.find(x => x.id === id);
+            if (confirm(`Bạn có chắc chắn muốn ngừng theo dõi khách hàng ${c.name}?`)) {
+                c.status = "Ngừng theo dõi";
+                renderTable();
+                showAlert("Đã tạm ngừng theo dõi khách hàng này.", "warning");
+            }
+        };
+
+        function showAlert(msg, type) {
+            document.getElementById("alertBox").innerHTML = `<div class="alert alert-${type} py-2 shadow-sm">${msg}</div>`;
+            setTimeout(() => document.getElementById("alertBox").innerHTML = "", 4000);
+        }
+
+        // Thêm các hàm saveCustomer, editCustomer, resetForm tương tự bản trước...
+        // [Đoạn này bạn copy lại logic xử lý Save/Edit từ bản code trước của mình nhé]
+
+        document.getElementById("saveBtn").onclick = function() {
+            const name = document.getElementById("nameInput").value.trim();
+            const phone = document.getElementById("phoneInput").value.trim();
+            const address = document.getElementById("addressInput").value.trim();
+            if (!name || !phone) { showAlert("Vui lòng nhập Tên và SĐT!", "danger"); return; }
+
+            if (editingId) {
+                let c = customers.find(x => x.id === editingId);
+                c.name = name; c.phone = phone; c.address = address;
+                showAlert("Đã cập nhật thông tin thành công.", "success");
+            } else {
+                const newId = "KH" + String(customers.length + 1).padStart(3, '0');
+                customers.push({ id: newId, name, phone, address, status: "Đang theo dõi" });
+                showAlert("Thêm mới khách hàng thành công.", "success");
+            }
+            resetForm(); renderTable();
+        };
+
+        window.editCustomer = function(id) {
+            const c = customers.find(x => x.id === id);
+            editingId = id;
+            document.getElementById("nameInput").value = c.name;
+            document.getElementById("phoneInput").value = c.phone;
+            document.getElementById("addressInput").value = c.address;
+            document.getElementById("saveBtn").innerText = "Cập nhật thay đổi";
+            document.getElementById("cancelBtn").classList.remove("d-none");
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        };
+
+        function resetForm() {
+            editingId = null;
+            document.getElementById("nameInput").value = "";
+            document.getElementById("phoneInput").value = "";
+            document.getElementById("addressInput").value = "";
+            document.getElementById("saveBtn").innerText = "Lưu thông tin";
+            document.getElementById("cancelBtn").classList.add("d-none");
+        }
+        
+        document.getElementById("searchInput").oninput = renderTable;
+        renderTable();
+    </script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hệ thống bàn giao tiền bán hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+        --primary-color: #1e3a8a; /* Navy Blue */
+        --accent-color: #051e47;
+        --success-color: #10b981;
+        --bg-body: #f1f5f9;
+      }
+
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Arial, sans-serif; }
+        .section-tag { 
+            display: inline-block; padding: 5px 12px; background: #495057; 
+            color: white; font-size: 0.8rem; border-radius: 4px; font-weight: bold; margin-bottom: 10px;
+        }
+        .money-input { font-family: 'Roboto Mono', monospace; font-weight: 700 !important; font-size: 1.1rem; }
+        input[readonly] { background-color: var(--readonly-bg) !important; font-weight: 700; color: #000; }
+        #day_total { 
+            font-size: 1.3rem; background-color: #d1e7dd !important; 
+            color: var(--success-color) !important; border: 2px solid var(--success-color); 
+        }
+        .card { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: none; margin-bottom: 20px; }
+        .pos-box { background: #fff; border-left: 4px solid #ced4da; padding: 12px; margin-bottom: 10px; border-radius: 4px; transition: all 0.3s; }
+        .btn-refresh { 
+            background: white; border: 1px solid #ced4da; color: #495057; 
+            font-weight: 600; width: 100%; padding: 8px; border-radius: 6px; margin-top: 10px;
+        }
+        @media print { .no-print { display: none !important; } .card { box-shadow: none; border: 1px solid #000; } }
+    </style>
+</head>
+<body class="py-4">
+    <div class="container">
+        <a href="index.html" class="no-print">← Trang chủ</a>
+        <h3 class="text-primary fw-bold text-center mb-4 no-print">QUẢN LÝ BÀN GIAO & NỘP TIỀN CHO KẾ TOÁN </h3>
+
+        <div class="row g-4">
+            <div class="col-lg-4 no-print">
+                <div class="card border-top border-dark border-4 sticky-top" style="top: 20px;">
+                    <div class="card-header bg-white fw-bold">Dữ liệu Hệ thống (POS)</div>
+                    <div class="card-body">
+                        <div id="box_pos_c1" class="pos-box">
+                            <div class="small fw-bold text-secondary mb-1">CA 1 (06:00 - 14:00)</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Doanh thu:</span> <strong id="pos_c1_val">---</strong>
+                            </div>
+                        </div>
+                        <div id="box_pos_c2" class="pos-box">
+                            <div class="small fw-bold text-secondary mb-1">CA 2 (14:00 - 22:00)</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Doanh thu:</span> <strong id="pos_c2_val">---</strong>
+                            </div>
+                        </div>
+                        <div class="p-3 border rounded bg-light mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">TỔNG HỆ THỐNG:</span>
+                                <strong id="pos_total_all" class="text-success h5 mb-0">---</strong>
+                            </div>
+                        </div>
+                        <button id="refreshBtn" class="btn-refresh shadow-sm">Làm mới dữ liệu POS</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card border-top border-primary border-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="section-tag mb-0">THÔNG TIN CA 1</div>
+                            <select id="status_ca1" class="form-select form-select-sm no-print border-primary w-25" onchange="updatePOSDisplay()">
+                                <option value="open">Đang mở</option>
+                                <option value="closed">Đã chốt ca</option>
+                            </select>
+                        </div>
+                        <div class="row g-3 mb-4 pb-4 border-bottom">
+                            <div class="col-md-6 no-print">
+                                <label class="small fw-bold">Mã NV Ca 1</label>
+                                <input id="mnv_ca1" type="text" class="form-control fw-bold" placeholder="Ví dụ: NV01">
+                            </div>
+                            <div class="col-md-12"></div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold text-muted">1. Tiền két đầu ca</label>
+                                <input id="ca1_opening" type="text" class="form-control money-input" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold">2. Doanh thu ca 1</label>
+                                <input id="ca1_revenue" type="text" class="form-control money-input" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold text-primary">3. Tổng doanh thu ca 1 </label>
+                                <input id="ca1_total" class="form-control money-input" readonly value="0 ₫">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="section-tag mb-0">THÔNG TIN CA 2</div>
+                            <select id="status_ca2" class="form-select form-select-sm no-print border-primary w-25" onchange="updatePOSDisplay()">
+                                <option value="open">Đang mở</option>
+                                <option value="closed">Đã chốt ca</option>
+                            </select>
+                        </div>
+                        <div class="row g-3 mb-4 pb-4 border-bottom">
+                            <div class="col-md-6 no-print">
+                                <label class="small fw-bold">Mã NV Ca 2</label>
+                                <input id="mnv_ca2" type="text" class="form-control fw-bold" placeholder="ví dụ: NV02">
+                            </div>
+                            <div class="col-md-12"></div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold text-danger">4. Doanh thu ca 1 bàn giao Ca 2</label>
+                                <input id="ca1_handover" type="text" class="form-control border-danger money-input" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold">5. Doanh thu ca 2</label>
+                                <input id="ca2_revenue" type="text" class="form-control money-input" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold text-primary">6. Tổng doanh thu ca 2 </label>
+                                <input id="ca2_total" class="form-control money-input" readonly value= "0 ₫">
+                            </div>
+                        </div>
+
+                        <div class="bg-light p-4 rounded border border-2">
+                            <div class="row g-3">
+                                <div class="col-12 mb-2">
+                                    <label class="fw-bold text-success">7. TỔNG TIỀN MẶT THỰC TẾ TRONG KẾT</label>
+                                    <input id="day_total" class="form-control money-input" readonly value="0 ₫">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold text-warning">8. Tiền để lại két sáng mai</label>
+                                    <input id="final_keep" type="text" class="form-control border-warning money-input" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold text-info">9. Doanh thu nộp kế toán</label>
+                                    <input id="final_deposit" type="text" class="form-control border-info money-input" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="mt-4 p-3 bg-white rounded border">
+                                <div id="diffDisplay" class="h5 fw-bold text-primary text-center mb-0">Chênh lệnh hệ thống: 0 ₫</div>
+                                <textarea id="diffReason" class="form-control mt-3 no-print" rows="2" placeholder="Ghi chú lý do lệch (nếu có)..."></textarea>
+                            </div>
+                        </div>
+
+                        <button id="submitBtn" class="btn btn-primary mt-4 w-100 py-3 fw-bold no-print">XÁC NHẬN & LƯU PHIẾU</button>
+
+                        <div id="receiptSection" class="mt-4 d-none">
+                            <div class="p-4 border bg-white" id="receiptBox"></div>
+                            <button onclick="window.print()" class="btn btn-dark w-100 mt-2 no-print">In phiếu</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const el = (id) => document.getElementById(id);
+        const formatVND = (v) => new Intl.NumberFormat('vi-VN').format(v) + " ₫";
+        const systemData = { c1: 3000000, c2: 2500000 };
+        let hasRefreshed = false;
+
+        function getVal(id) {
+            let element = el(id);
+            if (!element) return 0;
+            let rawValue = element.value || element.innerText || "0";
+            let cleanValue = rawValue.toString().replace(/[^0-9]/g, '');
+            return parseFloat(cleanValue) || 0;
+        }
+
+        function calculate() {
+            const c1o = getVal("ca1_opening"), c1r = getVal("ca1_revenue");
+            const c1h = getVal("ca1_handover"), c2r = getVal("ca2_revenue");
+            const fk = getVal("final_keep"), fd = getVal("final_deposit");
+
+            // Lấy trạng thái của 2 ca
+            const s1 = el("status_ca1").value;
+            const s2 = el("status_ca2").value;
+
+            // 1. Cập nhật các ô Tổng từng ca
+            const c1t = c1o + c1r;
+            el("ca1_total").value = formatVND(c1t);
+            
+            const c2t = c1h + c2r;
+            el("ca2_total").value = formatVND(c2t);
+
+            // 2. Gán Mục 7 bằng đúng giá trị Mục 6 (Tổng Ca 2)
+            const dayCash = c2t; 
+            el("day_total").value = formatVND(dayCash);
+
+            // 3. Tính toán chênh lệch
+            const total_real = c1r + c2r;
+            const total_system = systemData.c1 + systemData.c2;
+            const diff = total_real - total_system;
+
+            const disp = el("diffDisplay");
+            
+            // ĐIỀU KIỆN MỚI: Chỉ hiển thị số chênh lệch khi CẢ 2 CA đều đã CHỐT
+            if (s1 === "closed" && s2 === "closed" && hasRefreshed) {
+                disp.innerText = `Chênh lệch hệ thống: ${formatVND(diff)}`;
+                disp.className = diff === 0 ? "h5 fw-bold text-success text-center mb-0" : "h5 fw-bold text-danger text-center mb-0";
+            } else {
+                // Nếu chưa nhập xong thì để dòng thông báo chờ
+                disp.innerText = "Đang chờ hoàn tất nhập liệu cả 2 ca...";
+                disp.className = "h5 fw-bold text-secondary text-center mb-0";
+            }
+            
+            return { diff, dayCash, total_real, total_system };
+        }
+
+        function updatePOSDisplay() {
+            const s1 = el("status_ca1").value, s2 = el("status_ca2").value;
+            el("pos_c1_val").innerText = (s1 === "closed" && hasRefreshed) ? formatVND(systemData.c1) : "---";
+            el("pos_c2_val").innerText = (s2 === "closed" && hasRefreshed) ? formatVND(systemData.c2) : "---";
+            el("pos_total_all").innerText = (s1 === "closed" && s2 === "closed" && hasRefreshed) ? formatVND(systemData.c1 + systemData.c2) : "---";
+            calculate();
+        }
+
+        el("refreshBtn").onclick = () => {
+            hasRefreshed = true;
+            updatePOSDisplay();
+            el("refreshBtn").innerText = "Đã cập nhật!";
+            setTimeout(() => { el("refreshBtn").innerText = "Làm mới dữ liệu POS"; }, 2000);
+        };
+
+        ["ca1_opening", "ca1_revenue", "ca1_handover", "ca2_revenue", "final_keep", "final_deposit"].forEach(id => {
+            el(id).addEventListener("input", function() {
+                let v = this.value.replace(/\D/g, "");
+                this.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                calculate();
+            });
+        });
+
+        el("submitBtn").onclick = () => {
+            const { diff, dayCash, total_real, total_system } = calculate();
+            const reason = el("diffReason").value.trim();
+            el("receiptSection").classList.remove("d-none");
+            el("receiptBox").innerHTML = `
+                <h4 class="text-center fw-bold mb-4">PHIẾU TỔNG KẾT DOANH THU</h4>
+                <div class="row g-2">
+                    <div class="col-6">NV Ca 1: <b>${el("mnv_ca1").value || '---'}</b></div><div class="col-6 text-end">Thời gian: 06h-14h</div>
+                    <div class="col-6">NV Ca 2: <b>${el("mnv_ca2").value || '---'}</b></div><div class="col-6 text-end">Thời gian: 14h-22h</div>
+                    <hr>
+                    <div class="col-8">Doanh thu hệ thống (POS):</div><div class="col-4 text-end">${formatVND(total_system)}</div>
+                    <div class="col-8">Doanh thu thực :</div><div class="col-4 text-end">${formatVND(total_real)}</div>
+                    <div class="col-8 fw-bold">Chênh lệch doanh thu:</div><div class="col-4 text-end fw-bold ${diff !== 0 ? 'text-danger' : 'text-success'}">${formatVND(diff)}</div>
+                    <hr>
+                    <div class="col-8 fw-bold text-success">Tổng tiền thực tế trong két:</div><div class="col-4 text-end fw-bold text-success">${formatVND(dayCash)}</div>
+                    <div class="col-8 small">Để lại két:</div><div class="col-4 text-end small">${formatVND(getVal("final_keep"))}</div>
+                    <div class="col-8 small">Doanh thu thực nộp kế toán:</div><div class="col-4 text-end small">${formatVND(getVal("final_deposit"))}</div>
+                    ${reason ? `<div class="col-12 mt-3 p-2 bg-light border-start border-4 border-warning"><i>Lý do lệch: ${reason}</i></div>` : ''}
+                </div>
+            `;
+            window.scrollTo(0, document.body.scrollHeight);
+        };
+    </script>
+</body>
+</html>
