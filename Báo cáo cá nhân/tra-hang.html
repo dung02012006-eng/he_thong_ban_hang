@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trả hàng cho NPP - SmartFit Premium</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --accent-color: #3b82f6;
+            --success-color: #10b981;
+            --bg-body: #f1f5f9;
+        }
+
+        body { background-color: var(--bg-body); font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; color: #334155; }
+        .main-header { background: white; padding: 1.5rem 0; margin-bottom: 2rem; border-bottom: 1px solid #e2e8f0; }
+        .header-title { color: var(--primary-color); font-weight: 800; letter-spacing: -0.5px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); overflow: hidden; margin-bottom: 1.5rem; }
+        .card-header { background: white; border-bottom: 1px solid #f1f5f9; padding: 1.25rem; font-weight: 700; color: var(--primary-color); display: flex; align-items: center; gap: 10px; }
+        .form-label { font-weight: 600; font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem; }
+        .form-control, .form-select { border-radius: 8px; border: 1px solid #cbd5e1; padding: 0.6rem 1rem; }
+        .btn { border-radius: 8px; padding: 0.6rem 1.2rem; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background-color: var(--primary-color); border: none; }
+        .btn-success { background-color: var(--success-color); border: none; }
+        .stock-badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+        .stock-low { background-color: #fee2e2; color: #ef4444; }
+        .stock-ok { background-color: #ecfdf5; color: #10b981; }
+        .status-box { padding: 1rem; border-radius: 8px; background: #f8fafc; border-left: 4px solid #cbd5e1; }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="container">
+            <a href="index.html" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i>Trang chủ</a>
+            <h2 class="header-title mt-2 mb-0">HỆ THỐNG TRẢ HÀNG NPP</h2>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="alertBox"></div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-plus-circle-fill"></i> Lập Phiếu Mới
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label">Nguồn hàng</label>
+                            <select id="sourceType" class="form-select">
+                                <option value="" selected disabled>-- Chọn nguồn hàng --</option>
+                                <option value="ton">Hàng trong kho</option>
+                                <option value="khachtra">Khách trả lại</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Sản phẩm</label>
+                            <select id="productSelect" class="form-select">
+                                <option value="">Vui lòng chọn nguồn hàng trước</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Số lượng trả</label>
+                            <input id="returnQty" type="number" class="form-control" placeholder="0">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Lý do / Ghi chú</label>
+                            <textarea id="noteInput" rows="2" class="form-control" placeholder="Mô tả tình trạng hàng..."></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button id="addBtn" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Thêm sản phẩm</button>
+                            <button id="saveBtn" class="btn btn-success"><i class="bi bi-check2-all"></i> Xác nhận lưu phiếu</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-info-circle"></i> Trạng thái phiếu</div>
+                    <div class="card-body">
+                        <div id="statusBox" class="status-box text-muted small text-center">Đang chờ tạo phiếu...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span><i class="bi bi-box-seam"></i> Tồn kho chi tiết</span>
+                        <span class="badge bg-primary rounded-pill" id="sourceLabel">Chưa chọn nguồn</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 380px;">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Mã SP</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th class="text-center">Số lượng tồn</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card border-0" style="background: transparent; box-shadow: none;">
+                    <div class="card-header bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 rounded-top-4">
+                        <i class="bi bi-list-check"></i> Danh sách chờ xác nhận
+                    </div>
+                    <div class="table-responsive bg-white border border-top-0 rounded-bottom-4 shadow-sm">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Mã SP</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th>Nguồn</th>
+                                    <th class="text-center">SL Trả</th>
+                                </tr>
+                            </thead>
+                            <tbody id="returnSlipBody">
+                                <tr><td colspan="4" class="text-center text-muted py-4">Chưa có sản phẩm nào được chọn.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmSaveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-question-circle me-2"></i>Xác nhận lưu phiếu</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="mb-0 fs-5 fw-medium">Bạn có chắc chắn muốn lưu phiếu trả hàng này?</p>
+                    <p class="text-muted small mt-2">Hành động này sẽ cập nhật trực tiếp vào số lượng tồn kho của hệ thống.</p>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Quay lại</button>
+                    <button type="button" id="confirmSaveBtn" class="btn btn-success px-4">Đồng ý lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+         const products = {
+        ton: [
+          { id: "SP001", name: "Sữa tươi TH True Milk 1L", stock: 50 },
+          { id: "SP002", name: "Bánh quy Cosy bơ", stock: 30 },
+          { id: "SP003", name: "Nước ngọt Coca-Cola lon", stock: 100 },
+          { id: "SP004", name: "Mì tôm Hảo Hảo chua cay", stock: 150 },
+          { id: "SP005", name: "Gạo ST25 túi 5kg", stock: 20 },
+          { id: "SP006", name: "Dầu ăn Simply 1L", stock: 45 },
+          { id: "SP007", name: "Nước mắm Nam Ngư 750ml", stock: 60 },
+          { id: "SP008", name: "Bột giặt Omo 3kg", stock: 25 },
+          { id: "SP009", name: "Kem đánh răng P/S", stock: 80 },
+          { id: "SP010", name: "Xà phòng Safeguard", stock: 40 }
+        ],
+        khachtra: [
+          { id: "SP011", name: "Dầu gội Clear 650ml", stock: 5 },
+          { id: "SP012", name: "Sữa tắm Dove", stock: 8 },
+          { id: "SP013", name: "Nước rửa chén Sunlight", stock: 12 },
+          { id: "SP014", name: "Khăn giấy khô Bless You", stock: 15 },
+          { id: "SP015", name: "Tương ớt Chinsu 250g", stock: 10 },
+          { id: "SP016", name: "Cà phê G7 hòa tan", stock: 20 },
+          { id: "SP017", name: "Nước lau sàn Sunlight", stock: 0 },
+          { id: "SP018", name: "Khẩu trang y tế 4 lớp", stock: 50 },
+          { id: "SP019", name: "Xịt xua muỗi Remos", stock: 4 },
+          { id: "SP020", name: "Pin Panasonic AA (Vỉ 2)", stock: 30 }
+        ]
+      };
+
+        const sourceNames = { ton: "Hàng trong kho", khachtra: "Khách trả lại" };
+        const sourceType = document.getElementById("sourceType");
+        const productSelect = document.getElementById("productSelect");
+        const returnQty = document.getElementById("returnQty");
+        const noteInput = document.getElementById("noteInput");
+        const addBtn = document.getElementById("addBtn");
+        const saveBtn = document.getElementById("saveBtn");
+        const inventoryBody = document.getElementById("inventoryBody");
+        const returnSlipBody = document.getElementById("returnSlipBody");
+        const statusBox = document.getElementById("statusBox");
+        const alertBox = document.getElementById("alertBox");
+
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmSaveModal'));
+        const confirmSaveBtn = document.getElementById("confirmSaveBtn");
+
+        const returnItems = [];
+
+        function showAlert(message, type = "info") {
+            alertBox.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show d-flex align-items-center">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                    <div>${message}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>`;
+        }
+
+        // Hàm xóa trắng bảng tồn kho
+        function clearInventoryDisplay() {
+            inventoryBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-5">Vui lòng chọn nguồn hàng để hiển thị dữ liệu tồn kho.</td></tr>';
+            document.getElementById("sourceLabel").textContent = "Chưa chọn nguồn";
+        }
+
+        function renderProductOptions() {
+            const source = sourceType.value;
+            if(!source) return;
+            productSelect.innerHTML = products[source]
+                .map(item => `<option value="${item.id}">${item.id} - ${item.name} (Tồn: ${item.stock})</option>`)
+                .join("");
+            document.getElementById("sourceLabel").textContent = sourceNames[source];
+        }
+
+        function renderInventoryTable() {
+            const source = sourceType.value;
+            if(!source) return;
+            inventoryBody.innerHTML = products[source]
+                .map(item => `
+                    <tr>
+                        <td><code class="text-primary fw-bold">${item.id}</code></td>
+                        <td class="fw-medium">${item.name}</td>
+                        <td class="text-center">
+                            <span class="stock-badge ${item.stock <= 5 ? 'stock-low' : 'stock-ok'}">${item.stock}</span>
+                        </td>
+                    </tr>
+                `).join("");
+        }
+
+        function renderReturnSlip() {
+            if (returnItems.length === 0) {
+                returnSlipBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Chưa có sản phẩm nào được chọn.</td></tr>';
+                return;
+            }
+            returnSlipBody.innerHTML = returnItems.map(item => `
+                <tr>
+                    <td><code>${item.id}</code></td>
+                    <td class="fw-semibold">${item.name}</td>
+                    <td><span class="badge bg-light text-dark border">${sourceNames[item.source]}</span></td>
+                    <td class="text-center fw-bold text-primary">${item.qty}</td>
+                </tr>
+            `).join("");
+        }
+
+        addBtn.onclick = () => {
+            const source = sourceType.value;
+            if (!source) return showAlert("Vui lòng chọn nguồn hàng trước!", "warning");
+            
+            const productId = productSelect.value;
+            const selected = products[source].find(p => p.id === productId);
+            const qty = Number(returnQty.value);
+
+            if (qty <= 0) return showAlert("Số lượng trả phải lớn hơn 0!", "danger");
+            if (qty > selected.stock) return showAlert("Số lượng trả vượt quá tồn kho hiện có!", "warning");
+
+            const existing = returnItems.find(i => i.id === productId && i.source === source);
+            if (existing) existing.qty += qty;
+            else returnItems.push({ id: selected.id, name: selected.name, source, qty });
+
+            showAlert(`Đã thêm <b>${selected.name}</b> vào danh sách chờ.`, "success");
+            returnQty.value = "";
+            renderReturnSlip();
+        };
+
+        saveBtn.onclick = () => {
+            if (returnItems.length === 0) return showAlert("Danh sách trả hàng đang trống!", "warning");
+            confirmModal.show();
+        };
+
+        confirmSaveBtn.onclick = () => {
+            confirmModal.hide();
+            returnItems.forEach(item => {
+                const product = products[item.source].find(p => p.id === item.id);
+                if (product) product.stock -= item.qty;
+            });
+
+            const hasNote = noteInput.value.trim();
+            statusBox.innerHTML = hasNote 
+                ? '<span class="text-warning fw-bold"><i class="bi bi-clock-history"></i> Chờ đối soát từ NPP</span>'
+                : '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Đã hoàn thành trả hàng</span>';
+
+            showAlert("Lưu phiếu trả hàng thành công!", "success");
+            returnItems.length = 0;
+            noteInput.value = "";
+            renderReturnSlip();
+            renderInventoryTable();
+            renderProductOptions();
+        };
+
+        sourceType.onchange = () => { 
+            if (sourceType.value) {
+                renderProductOptions(); 
+                renderInventoryTable(); 
+            } else {
+                clearInventoryDisplay();
+            }
+        };
+
+        // Khởi tạo ban đầu: Bảng trống
+        clearInventoryDisplay();
+    </script>
+</body>
+</html>

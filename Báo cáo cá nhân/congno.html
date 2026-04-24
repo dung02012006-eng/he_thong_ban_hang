@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hệ thống Quản lý Công nợ - SmartFit Premium</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+      :root {
+        --primary: #2563eb;
+        --danger: #ef4444;
+        --success: #10b981;
+        --bg-body: #f1f5f9;
+      }
+      body { background-color: var(--bg-body); font-family: system-ui, -apple-system, sans-serif; }
+      
+      .stat-card { border: none; border-radius: 12px; border-left: 5px solid var(--primary); background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+      .card-main { border: none; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; background: white; }
+      
+      .table thead th { 
+        background-color: #dee2e6 !important; 
+        font-weight: 800 !important;          
+        color: #000; 
+        text-transform: uppercase; 
+        font-size: 0.85rem; 
+        padding: 18px 15px; 
+        border-bottom: 3px solid #adb5bd !important;
+      }
+      
+      .table tbody td { 
+        padding: 15px; 
+        vertical-align: middle; 
+        border-bottom: 1px solid #dee2e6;
+        color: #212529;
+      }
+      
+      .td-name { font-weight: 700 !important; color: #2d2f31 !important; }
+      .td-money { font-weight: 900 !important; color: #dc3545 !important; }
+      .td-bold-sub { font-weight: 600; }
+      .overdue-row { background-color: #fff1f2 !important; }
+      
+      .btn-view { border-radius: 6px; font-weight: 700; padding: 5px 20px; border: 2px solid #0d6efd; color: #0d6efd; background: white; }
+      .btn-view:hover { background: #0d6efd; color: white; }
+
+      @media print {
+        body * { visibility: hidden; }
+        #modalBody, #modalBody * { visibility: visible; }
+        #modalBody { position: absolute; left: 0; top: 0; width: 100%; padding: 30px; color: black !important; }
+        .btn, .btn-close, .modal-footer, .stat-card, .card-main, h3, .text-muted, a { display: none !important; }
+        .invoice-item { border: 1px solid black !important; margin-bottom: 10px; padding: 10px; }
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="index.html" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i> Trang chủ</a>
+        <h3 class="fw-bold mb-0">HỆ THỐNG QUẢN LÝ CÔNG NỢ</h3>
+        <button id="exportBtn" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-file-earmark-excel"></i> XUẤT BÁO CÁO (CSV)
+        </button>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card stat-card p-3">
+            <div class="small text-muted fw-bold">Tổng khách hàng</div>
+            <div class="h4 fw-bold mb-0" id="statTotalCust">0</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card stat-card p-3" style="border-left-color: var(--danger);">
+            <div class="small text-danger fw-bold">Đang nợ quá hạn</div>
+            <div class="h4 fw-bold mb-0 text-danger" id="statOverdueCust">0</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card stat-card p-3" style="border-left-color: #10b981;">
+            <div class="small text-muted fw-bold">Tổng nợ chưa thu</div>
+            <div class="h4 fw-bold mb-0 text-success" id="statTotalDebt">0 đ</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3 p-3 border-0 shadow-sm">
+        <div class="row g-2">
+            <div class="col-md-9">
+              <input id="searchInput" type="text" class="form-control fw-bold" placeholder="Tìm tên hoặc mã khách hàng...">
+            </div>
+            <div class="col-md-3">
+                <select id="debtFilter" class="form-select fw-bold">
+                    <option value="all">Tất cả danh sách</option>
+                    <option value="overdue">Chỉ hiện quá hạn 🚩</option>
+                </select>
+            </div>
+        </div>
+      </div>
+
+      <div class="card card-main">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="mainTable">
+            <thead>
+              <tr>
+                <th>Mã KH</th>
+                <th>Tên khách hàng</th>
+                <th>SĐT</th>
+                <th class="text-end">Tổng nợ</th>
+                <th>Hạn gần nhất</th>
+                <th class="text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="customerTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="detailModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+          <div class="modal-header bg-light">
+            <h5 class="modal-title fw-bold">PHIẾU CHI TIẾT CÔNG NỢ</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="modalBody"></div>
+          <div class="modal-footer bg-light border-0">
+            <button class="btn btn-dark fw-bold" onclick="window.print()">
+                <i class="bi bi-printer"></i> IN PHIẾU (PDF)
+            </button>
+            <button class="btn btn-primary fw-bold px-4" id="btnLapPhieu">LẬP PHIẾU THU</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      const today = new Date("2026-04-17");
+      
+      const customers = [
+        { id: "KH001", name: "Nguyễn Văn An", phone: "0901234567", email: "an.nguyen@gmail.com", address: "123 Lê Lợi, Q.1, TP.HCM", invoices: [{ code: "HD1001", amount: 3000000, dueDate: "2026-03-10" }] },
+        { id: "KH002", name: "Trần Thị Bình", phone: "0912345678", email: "binh.tran@yahoo.com", address: "45 Nguyễn Huệ, Q.1, TP.HCM", invoices: [{ code: "HD1009", amount: 2200000, dueDate: "2026-03-25" }] },
+        { id: "KH003", name: "Trần Thanh Biên", phone: "0912343678", email: "bien.tt@outlook.com", address: "78 CMT8, Q.3, TP.HCM", invoices: [{ code: "HD1019", amount: 22464400, dueDate: "2026-04-25" }] },
+        { id: "KH004", name: "Ngô Thanh Vân", phone: "0975343478", email: "van.ngo@gmail.com", address: "12 Phan Đăng Lưu, Bình Thạnh", invoices: [{ code: "HD1209", amount: 1000000, dueDate: "2026-05-01" }] },
+        { id: "KH005", name: "Nguyễn Thúy Nga", phone: "0912345678", email: "nga.nthuy@gmail.com", address: "56 Quang Trung, Gò Vấp", invoices: [{ code: "HD2009", amount: 1345000, dueDate: "2026-02-15" }] },
+        { id: "KH006", name: "Lê Minh Châu", phone: "0988111222", email: "chau.lm@hotmail.com", address: "89 Võ Văn Ngân, Thủ Đức", invoices: [{ code: "HD1033", amount: 560000, dueDate: "2026-01-30" }] },
+        { id: "KH007", name: "Nguyễn Thị Thanh", phone: "0952425678", email: "thanh.nt@gmail.com", address: "210 Lý Thường Kiệt, Q.10", invoices: [{ code: "HD1000", amount: 24323420, dueDate: "2026-06-25" }] },
+        { id: "KH008", name: "Đặng Thị Thảo", phone: "0872345678", email: "thao.dang@gmail.com", address: "33 Cao Thắng, Q.3", invoices: [{ code: "HD1110", amount: 3230000, dueDate: "2025-12-25" }] },
+        { id: "KH009", name: "Bùi Xuân Huấn", phone: "0987654321", email: "huan.rose@yahoo.com", address: "77 Nguyễn Trãi, Q.5", invoices: [{ code: "HD9999", amount: 5000000, dueDate: "2026-12-31" }] },
+        { id: "KH010", name: "Trịnh Thanh Bình", phone: "0923425678", email: "binh.trinh@gmail.com", address: "15 Trần Hưng Đạo, Q.1", invoices: [{ code: "HD1109", amount: 2425000, dueDate: "2026-04-30" }] },
+        { id: "KH011", name: "Trần Thị Quỳnh Lê", phone: "0912378938", email: "le.quynh@gmail.com", address: "44 Lê Văn Sỹ, Tân Bình", invoices: [{ code: "HD1209", amount: 23523000, dueDate: "2026-01-10" }] },
+        { id: "KH012", name: "Nguyễn Thị Vân", phone: "0937325117", email: "van.nt@outlook.com", address: "102 Hoàng Văn Thụ, Phú Nhuận", invoices: [{ code: "HD1309", amount: 3320000, dueDate: "2025-11-20" }] },
+        { id: "KH013", name: "Phạm Thị Thanh", phone: "0823525048", email: "thanh.pham@gmail.com", address: "67 Bà Huyện Thanh Quan, Q.3", invoices: [{ code: "HD2342", amount: 1240000, dueDate: "2026-05-20" }] },
+        { id: "KH014", name: "Ngô Kim Vân", phone: "0235232353", email: "van.kn@gmail.com", address: "82 Đinh Tiên Hoàng, Bình Thạnh", invoices: [{ code: "HD2353", amount: 2352000, dueDate: "2026-04-22" }] },
+        { id: "KH015", name: "Đặng Kim Trúc", phone: "0945342533", email: "truc.dang@yahoo.com", address: "19 Nguyễn Kiệm, Gò Vấp", invoices: [{ code: "HD4363", amount: 3466000, dueDate: "2026-03-01" }] },
+        { id: "KH016", name: "Phạm Thu Quỳnh", phone: "0235236235", email: "quynh.p@gmail.com", address: "25 Cộng Hòa, Tân Bình", invoices: [{ code: "HD1601", amount: 2223520, dueDate: "2026-05-25" }] },
+        { id: "KH017", name: "Vũ Minh Hoàng", phone: "0903112233", email: "hoang.vu@gmail.com", address: "50 Trường Chinh, Tân Bình", invoices: [{ code: "HD1701", amount: 4500000, dueDate: "2026-04-10" }] },
+        { id: "KH018", name: "Đỗ Thị Mai", phone: "0933445566", email: "mai.do@gmail.com", address: "120 Điện Biên Phủ, Q.1", invoices: [{ code: "HD1801", amount: 1200000, dueDate: "2026-05-15" }] },
+        { id: "KH019", name: "Hoàng Văn Nam", phone: "0911223344", email: "nam.h@yahoo.com", address: "35 Nam Kỳ Khởi Nghĩa, Q.1", invoices: [{ code: "HD1901", amount: 890000, dueDate: "2026-03-20" }] },
+        { id: "KH020", name: "Lý Thu Thủy", phone: "0944556677", email: "thuy.ly@gmail.com", address: "288 Nguyễn Văn Cừ, Q.5", invoices: [{ code: "HD2001", amount: 5600000, dueDate: "2026-04-15" }] },
+        { id: "KH021", name: "Chu Kim Liên", phone: "0966778899", email: "lien.chu@outlook.com", address: "15 Hậu Giang, Q.6", invoices: [{ code: "HD2101", amount: 3200000, dueDate: "2026-02-28" }] },
+        { id: "KH022", name: "Đinh Công Thành", phone: "0977889900", email: "thanh.d@gmail.com", address: "99 Kinh Dương Vương, Q.6", invoices: [{ code: "HD2201", amount: 1500000, dueDate: "2026-06-01" }] },
+        { id: "KH023", name: "Võ Thị Sáu", phone: "0988990011", email: "sau.vo@gmail.com", address: "06 Võ Thị Sáu, Q.1", invoices: [{ code: "HD2301", amount: 780000, dueDate: "2026-03-05" }] },
+        { id: "KH024", name: "Trương Mỹ Linh", phone: "0909090909", email: "linh.t@gmail.com", address: "412 CMT8, Q.10", invoices: [{ code: "HD2401", amount: 12500000, dueDate: "2026-04-20" }] },
+        { id: "KH025", name: "Phan Anh Tuấn", phone: "0919191919", email: "tuan.p@yahoo.com", address: "55 Nguyễn Oanh, Gò Vấp", invoices: [{ code: "HD2501", amount: 4300000, dueDate: "2026-01-20" }] },
+        { id: "KH026", name: "Hà Thị Ngọc", phone: "0929292929", email: "ngoc.ha@gmail.com", address: "18 Thống Nhất, Gò Vấp", invoices: [{ code: "HD2601", amount: 950000, dueDate: "2026-05-10" }] },
+        { id: "KH027", name: "Tô Vĩnh Diện", phone: "0939393939", email: "dien.to@gmail.com", address: "22 Nơ Trang Long, Bình Thạnh", invoices: [{ code: "HD2701", amount: 2100000, dueDate: "2026-03-30" }] },
+        { id: "KH028", name: "Bùi Thị Xuân", phone: "0949494949", email: "xuan.b@outlook.com", address: "134 Nguyễn Xí, Bình Thạnh", invoices: [{ code: "HD2801", amount: 6700000, dueDate: "2026-04-18" }] },
+        { id: "KH029", name: "Dương Quá", phone: "0959595959", email: "qua.d@gmail.com", address: "01 Phạm Văn Đồng, Thủ Đức", invoices: [{ code: "HD2901", amount: 12000000, dueDate: "2026-02-10" }] },
+        { id: "KH030", name: "Nguyễn Tiểu Long", phone: "0969696969", email: "long.nt@gmail.com", address: "10 Kha Vạn Cân, Thủ Đức", invoices: [{ code: "HD3001", amount: 3400000, dueDate: "2026-05-05" }] }
+      ];
+
+      function formatMoney(v) { return v.toLocaleString("vi-VN") + " đ"; }
+      function isOverdue(d) { return new Date(d) < today; }
+
+      function renderTable() {
+        const keyword = document.getElementById("searchInput").value.toLowerCase();
+        const filter = document.getElementById("debtFilter").value;
+        const filtered = customers.filter(c => {
+          const m = c.name.toLowerCase().includes(keyword) || c.id.toLowerCase().includes(keyword);
+          const o = c.invoices.some(i => isOverdue(i.dueDate));
+          return m && (filter === "all" || (filter === "overdue" && o));
+        });
+
+        document.getElementById("statTotalCust").innerText = filtered.length;
+        document.getElementById("statOverdueCust").innerText = filtered.filter(c => c.invoices.some(i => isOverdue(i.dueDate))).length;
+        const total = filtered.reduce((acc, c) => acc + c.invoices.reduce((s, i) => s + i.amount, 0), 0);
+        document.getElementById("statTotalDebt").innerText = formatMoney(total);
+
+        document.getElementById("customerTableBody").innerHTML = filtered.map(c => {
+          const sum = c.invoices.reduce((s, i) => s + i.amount, 0);
+          const o = c.invoices.some(i => isOverdue(i.dueDate));
+          return `
+            <tr class="${o ? 'overdue-row' : ''}">
+              <td class="td-bold-sub">${c.id}</td>
+              <td class="td-name">${c.name}</td>
+              <td class="td-bold-sub">${c.phone}</td>
+              <td class="text-end td-money">${formatMoney(sum)}</td>
+              <td class="td-bold-sub">${c.invoices[0].dueDate} ${o ? '<i class="bi bi-exclamation-circle-fill text-danger"></i>' : ''}</td>
+              <td class="text-center"><button class="btn btn-sm btn-view" onclick="showDetail('${c.id}')">Xem</button></td>
+            </tr>`;
+        }).join("");
+        return filtered;
+      }
+
+      window.showDetail = function(id) {
+        const c = customers.find(i => i.id === id);
+        const total = c.invoices.reduce((s, i) => s + i.amount, 0);
+        document.getElementById("modalBody").innerHTML = `
+            <div class="text-center mb-4">
+                <h4 class="fw-bold mb-0">THÔNG TIN CÔNG NỢ CHI TIẾT</h4>
+                <p class="text-muted small">Ngày truy xuất: ${today.toLocaleDateString('vi-VN')}</p>
+            </div>
+            <div class="row mb-3 bg-light p-2 mx-0 rounded border">
+                <div class="col-6"><b>Mã KH:</b> ${c.id}</div>
+                <div class="col-6 text-end"><b>SĐT:</b> ${c.phone}</div>
+                <div class="col-12 mt-1"><b>Khách hàng:</b> ${c.name}</div>
+                <div class="col-12 mt-1"><b>Email:</b> ${c.email}</div>
+                <div class="col-12 mt-1"><b>Địa chỉ:</b> ${c.address}</div>
+            </div>
+            <div class="p-3 bg-white rounded-3 mb-3 border text-center shadow-sm">
+                <small class="fw-bold text-muted">TỔNG DƯ NỢ HIỆN TẠI</small>
+                <div class="h3 fw-bold text-danger mb-0">${formatMoney(total)}</div>
+            </div>
+            <div class="fw-bold mb-2 small text-primary">DANH SÁCH HÓA ĐƠN:</div>
+            ${c.invoices.map(inv => `
+                <div class="invoice-item d-flex justify-content-between border-bottom py-2">
+                    <span>HĐ: ${inv.code} (Hạn: ${inv.dueDate})</span>
+                    <b class="text-danger">${formatMoney(inv.amount)}</b>
+                </div>
+            `).join("")}
+            <div class="mt-5 text-center d-none d-print-block">
+                <div class="row">
+                    <div class="col-6 fw-bold">Người lập phiếu<br><br><br><br>..........................</div>
+                    <div class="col-6 fw-bold">Khách hàng xác nhận<br><br><br><br>..........................</div>
+                </div>
+            </div>`;
+        
+        document.getElementById("btnLapPhieu").onclick = () => alert("Chuyển hướng: Lập phiếu thu cho " + c.name);
+        new bootstrap.Modal(document.getElementById('detailModal')).show();
+      };
+
+      document.getElementById("exportBtn").onclick = () => {
+          const currentData = renderTable();
+          let csv = "\uFEFFMã KH,Tên Khách Hàng,SĐT,Email,Địa chỉ,Tổng Nợ,Hạn Thanh Toán\n";
+          currentData.forEach(c => {
+              csv += `${c.id},${c.name},${c.phone},${c.email},"${c.address}",${c.invoices.reduce((s,i)=>s+i.amount,0)},${c.invoices[0].dueDate}\n`;
+          });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+          link.download = "Bao_cao_Cong_No.csv";
+          link.click();
+      };
+
+      document.getElementById("searchInput").oninput = renderTable;
+      document.getElementById("debtFilter").onchange = renderTable;
+      renderTable();
+    </script>
+  </body>
+</html>
